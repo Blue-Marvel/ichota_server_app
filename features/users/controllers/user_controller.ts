@@ -9,7 +9,7 @@ export const authUser = async (req: Request, res: Response): Promise<any> => {
   const { email, password, deviceId } = req.body;
 
   try {
-    const foundUser = await User.findOne({ email });
+    const foundUser = await User.findOne({ email }).select("-password");
     if (!foundUser) {
       const user = await User.create({
         email,
@@ -21,10 +21,19 @@ export const authUser = async (req: Request, res: Response): Promise<any> => {
       const token = createJwt({ email: user.email, id: user._id });
       console.log(token);
 
-      res
-        .status(StatusCodes.CREATED)
-        .json({ message: "User created successfully", createdUser: user });
+      const stripPassword = await User.findById(user._id).select("-password");
+
+      res.status(StatusCodes.CREATED).json({
+        message: "User created successfully",
+        createdUser: stripPassword,
+        token,
+      });
       //generate token and send
+    } else {
+      //call login function
+      //Remember to add the custom error inside the util folder
+      //to handle existing users
+      await login(req, res);
     }
   } catch (e) {
     console.log(e);
@@ -32,6 +41,7 @@ export const authUser = async (req: Request, res: Response): Promise<any> => {
 };
 // }
 
+//remove this function or call it in the authUser method when there is a user
 export const login = async (req: Request, res: Response) => {
   console.log(req.body);
 
